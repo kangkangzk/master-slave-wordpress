@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+    name: mysql-slave
+    namespace: wordpress
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            mysql: slave
+    serviceName: "wordpress-to-slave"
+    template:
+        metadata:
+            labels:
+                mysql: slave
+        spec:
+            containers:
+            - name: mysql-slave
+              image: mysql:5.7
+              imagePullPolicy: IfNotPresent
+              env:
+              - name: MYSQL_ROOT_PASSWORD
+                value: "redhat"
+
+              readinessProbe:
+                 tcpSocket:
+                    port: 3306
+                 initialDelaySeconds: 15
+                 periodSeconds: 10
+              livenessProbe:
+                 tcpSocket:
+                    port: 3306
+                 initialDelaySeconds: 30
+                 periodSeconds: 10           
+              volumeMounts:
+                - name: mysql-slave-volume
+                  mountPath: /var/lib/mysql
+                - name: mysql-config-volume
+                  mountPath: "/etc/mysql/conf.d/"
+            volumes:
+              - name: mysql-slave-volume
+                persistentVolumeClaim:
+                  claimName: mysql-slave-pvc
+              - name: mysql-config-volume
+                configMap:
+                    name: mysql-slave
+              

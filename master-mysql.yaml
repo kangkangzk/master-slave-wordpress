@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+    name: mysql-master
+    namespace: wordpress
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            mysql: master
+    serviceName: "wordpress-to-mysql"
+    template:
+        metadata:
+            labels:
+                mysql: master
+        spec:
+            containers:
+            - name: mysql-master
+              image: mysql:5.7
+              imagePullPolicy: IfNotPresent
+              env:
+              - name: MYSQL_ROOT_PASSWORD
+                value: "redhat"
+              - name: MYSQL_DATABASE
+                value: "wordpress"
+              - name: MYSQL_USER
+                value: "wpuser"
+              - name: MYSQL_PASSWORD
+                value: "redhat"
+
+              readinessProbe:
+                 tcpSocket:
+                    port: 3306
+                 initialDelaySeconds: 15
+                 periodSeconds: 10
+              livenessProbe:
+                 tcpSocket:
+                    port: 3306
+                 initialDelaySeconds: 30
+                 periodSeconds: 10           
+              volumeMounts:
+                - name: mysql-master-volume
+                  mountPath: /var/lib/mysql
+                - name: mysql-config-volume
+                  mountPath: "/etc/mysql/conf.d/" 
+            volumes:
+              - name: mysql-master-volume
+                persistentVolumeClaim:
+                  claimName: mysql-data-pvc
+
+              - name: mysql-config-volume
+                configMap:
+                        name: mysql-master
